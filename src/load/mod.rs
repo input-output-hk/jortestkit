@@ -53,6 +53,8 @@ where
         collectors.push((response_collector, title));
     }
 
+    m.join_and_clear().unwrap();
+
     for ex in executors {
         ex.wait_for_finish();
     }
