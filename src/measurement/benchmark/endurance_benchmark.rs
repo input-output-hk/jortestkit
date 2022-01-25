@@ -65,7 +65,7 @@ impl EnduranceBenchmarkRun {
 
     pub fn max_endurance_reached(&self) -> bool {
         if let Some(thresholds) = &self.definition.thresholds {
-            self.start_marker.elapsed() > thresholds.max().into()
+            self.start_marker.elapsed() > Duration::from(thresholds.max())
         } else {
             false
         }

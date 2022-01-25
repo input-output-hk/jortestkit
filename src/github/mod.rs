@@ -127,6 +127,7 @@ impl Asset {
 #[derive(Clone, Debug)]
 pub struct Release {
     version: String,
+    #[allow(unused)]
     released_date: Option<SystemTime>,
     releases_per_os: HashMap<OsType, Asset>,
     prerelease: bool,

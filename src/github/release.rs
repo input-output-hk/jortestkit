@@ -1,30 +1,34 @@
 use crate::github::{Asset, Release};
-use chrono::{DateTime, Utc};
 use os_info::Type as OsType;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 mod serializer {
-    use chrono::{DateTime, TimeZone, Utc};
     use serde::{self, Deserialize, Deserializer, Serializer};
+    use time::OffsetDateTime;
 
-    const FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
-
-    pub fn serialize<S>(date: &Option<DateTime<Utc>>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(date: &Option<OffsetDateTime>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         match date {
-            Some(date) => serializer.serialize_some(&format!("{}", date.format(FORMAT))),
+            Some(date) => serializer.serialize_some(
+                &date
+                    .format(&time::format_description::well_known::Rfc3339)
+                    .unwrap(),
+            ),
             None => serializer.serialize_none(),
         }
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<OffsetDateTime>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let s = Option::<String>::deserialize(deserializer)?;
-        Ok(s.map(|s| Utc.datetime_from_str(s.as_str(), FORMAT).unwrap()))
+        Ok(s.map(|s| {
+            OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339).unwrap()
+        }))
     }
 }
 
@@ -32,7 +36,7 @@ mod serializer {
 pub struct ReleaseDto {
     tag_name: String,
     #[serde(with = "serializer")]
-    published_at: Option<DateTime<Utc>>,
+    published_at: Option<OffsetDateTime>,
     assets: Vec<AssetDto>,
     prerelease: bool,
     draft: bool,
@@ -62,7 +66,7 @@ impl ReleaseDto {
         self.tag_name
     }
 
-    pub fn published_at(&self) -> Option<&DateTime<Utc>> {
+    pub fn published_at(&self) -> Option<&OffsetDateTime> {
         self.published_at.as_ref()
     }
 
