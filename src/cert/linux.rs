@@ -1,5 +1,7 @@
+use crate::archive::DecompressError;
 use crate::prelude::decompress;
 use crate::prelude::download_file_as;
+use crate::web::WebError;
 use assert_fs::fixture::PathChild;
 use assert_fs::TempDir;
 use reqwest::Url;
@@ -8,6 +10,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::Output;
 use std::process::Stdio;
+use thiserror::Error;
 
 pub struct EasyRsa {
     temp_dir: TempDir,
@@ -20,28 +23,43 @@ impl Default for EasyRsa {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Web(#[from] WebError),
+    #[error(transparent)]
+    Archive(#[from] DecompressError),
+}
+
 const EASY_RSA_BIN: &str =
     "https://github.com/OpenVPN/easy-rsa/releases/download/v3.0.8/EasyRSA-3.0.8.tgz";
 
 impl EasyRsa {
-    pub fn download_app(&self) {
-        std::fs::create_dir_all(self.easy_dir());
-        download_file_as(EASY_RSA_BIN, &self.easy_dir(), &self.easy_rsa_file())
-            .expect("cannot download file");
+    pub fn download_app(&self) -> Result<(), Error> {
+        std::fs::create_dir_all(self.easy_dir())?;
+        download_file_as(EASY_RSA_BIN, &self.easy_dir(), &self.easy_rsa_file())?;
 
         let mut compressed_app = self.easy_dir();
         compressed_app.push(self.easy_rsa_file());
-        decompress(&compressed_app, &self.easy_dir()).unwrap()
+        decompress(&compressed_app, &self.easy_dir()).map_err(Into::into)
     }
 
     fn easy_rsa_file(&self) -> String {
-        let url = Url::parse(EASY_RSA_BIN).unwrap();
-        url.path_segments().unwrap().last().unwrap().to_string()
+        Url::parse(EASY_RSA_BIN)
+            .unwrap()
+            .path_segments()
+            .unwrap()
+            .last()
+            .unwrap()
+            .to_string()
     }
 
     fn easy_rsa_file_name(&self) -> String {
-        let url = Url::parse(EASY_RSA_BIN).unwrap();
-        url.to_file_path()
+        Url::parse(EASY_RSA_BIN)
+            .unwrap()
+            .to_file_path()
             .unwrap()
             .file_stem()
             .unwrap()
@@ -56,7 +74,7 @@ impl EasyRsa {
 
     fn extracted_easy_dir(&self) -> PathBuf {
         let mut source = self.easy_dir();
-        source.push("EasyRSA-3.0.8");
+        source.push(self.easy_rsa_file_name());
         source
     }
 
@@ -117,8 +135,7 @@ impl EasyRsa {
             .arg("nopass")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .spawn()
-            .unwrap();
+            .spawn()?;
 
         let mut stdin = process.stdin.take().unwrap();
         stdin.write_all(b"localhost")?;
@@ -131,8 +148,8 @@ impl EasyRsa {
             .arg("nopass")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .spawn()
-            .unwrap();
+            .spawn()?;
+
         let mut stdin = process.stdin.take().unwrap();
 
         stdin.write_all(b"server")?;
@@ -145,8 +162,8 @@ impl EasyRsa {
             .arg("server")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .spawn()
-            .unwrap();
+            .spawn()?;
+
         let mut stdin = process.stdin.take().unwrap();
 
         stdin.write_all(b"server")?;

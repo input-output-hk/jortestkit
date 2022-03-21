@@ -47,8 +47,6 @@ pub fn decompress(input: &Path, output: &Path) -> Result<(), DecompressError> {
         }
         return Ok(());
     } else if path.ends_with(".tar.gz") || path.ends_with(".tgz") {
-        println!("{:?}", path);
-        let tar_gz = File::open(path).unwrap();
         let tar_gz = File::open(path).map_err(|_| DecompressError::CannotOpenArchiveFile)?;
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);
