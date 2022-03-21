@@ -2,6 +2,7 @@
 use jortestkit::prelude::EasyRsa;
 
 #[test]
+#[ignore = "ignoring until problem with user interaction is solved"]
 pub fn easy_rsa() {
     let easy_rsa = EasyRsa::default();
     easy_rsa.download_app();
