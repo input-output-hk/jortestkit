@@ -1,10 +1,12 @@
 use crate::prelude::decompress;
-use crate::prelude::download_file;
+use crate::prelude::download_file_as;
 use assert_fs::fixture::PathChild;
 use assert_fs::TempDir;
+use reqwest::Url;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
+use std::process::Output;
 use std::process::Stdio;
 
 pub struct EasyRsa {
@@ -23,20 +25,56 @@ const EASY_RSA_BIN: &str =
 
 impl EasyRsa {
     pub fn download_app(&self) {
-        download_file(EASY_RSA_BIN.to_string(), &self.easy_dir()).expect("cannot download file");
+        std::fs::create_dir_all(self.easy_dir());
+        download_file_as(EASY_RSA_BIN, &self.easy_dir(), &self.easy_rsa_file())
+            .expect("cannot download file");
 
         let mut compressed_app = self.easy_dir();
-        compressed_app.push(EASY_RSA_BIN);
+        compressed_app.push(self.easy_rsa_file());
         decompress(&compressed_app, &self.easy_dir()).unwrap()
+    }
+
+    fn easy_rsa_file(&self) -> String {
+        let url = Url::parse(EASY_RSA_BIN).unwrap();
+        url.path_segments().unwrap().last().unwrap().to_string()
+    }
+
+    fn easy_rsa_file_name(&self) -> String {
+        let url = Url::parse(EASY_RSA_BIN).unwrap();
+        url.to_file_path()
+            .unwrap()
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
     }
 
     fn easy_dir(&self) -> PathBuf {
         self.temp_dir.child("easy_rsa").path().to_path_buf()
     }
 
-    pub fn prepare_var_file(&self) -> Result<(), std::io::Error> {
+    fn extracted_easy_dir(&self) -> PathBuf {
         let mut source = self.easy_dir();
+        source.push("EasyRSA-3.0.8");
+        source
+    }
+
+    fn extracted_vars_example(&self) -> PathBuf {
+        let mut source = self.extracted_easy_dir();
         source.push("vars.example");
+        source
+    }
+    pub fn init_pki(&self) -> Result<Output, std::io::Error> {
+        self.easy_rsa()
+            .arg("init-pki")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .output()
+    }
+
+    pub fn prepare_var_file(&self) -> Result<(), std::io::Error> {
+        let source = self.extracted_vars_example();
 
         let text = crate::file::read_file(&source)?
             .replace(
@@ -67,7 +105,7 @@ impl EasyRsa {
     }
 
     fn easy_rsa(&self) -> Command {
-        let mut easy_rsa = self.easy_dir();
+        let mut easy_rsa = self.extracted_easy_dir();
         easy_rsa.push("easyrsa");
         Command::new(easy_rsa)
     }

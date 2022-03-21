@@ -36,5 +36,5 @@ pub mod prelude {
     pub use crate::process::{
         self, output_extensions::ProcessOutput, ProcessError, Wait, WaitBuilder,
     };
-    pub use crate::web::download_file;
+    pub use crate::web::{download_file, download_file_as};
 }
