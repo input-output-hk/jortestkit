@@ -1,7 +1,7 @@
 pub mod archive;
+pub mod cert;
 pub mod console;
 pub mod csv;
-pub mod cert;
 pub mod file;
 pub mod github;
 pub mod load;
@@ -16,9 +16,9 @@ pub mod web;
 extern crate lazy_static;
 
 pub mod prelude {
+    pub use crate::archive::decompress;
     #[cfg(unix)]
     pub use crate::cert::EasyRsa;
-    pub use crate::archive::decompress;
     pub use crate::console::*;
     pub use crate::csv::CsvFileBuilder;
     pub use crate::file::*;
