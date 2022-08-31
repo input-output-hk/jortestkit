@@ -40,7 +40,7 @@ warp = "0.3"
 base64 = "0.13.0"
 rayon = "1"
 sha2 = "0.9"
-sha-1 = "0.9"
+sha-1 = "0.10"
 
 [dependencies.reqwest]
 version = "0.11"
